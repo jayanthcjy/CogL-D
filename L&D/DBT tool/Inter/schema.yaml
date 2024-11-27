@@ -1,0 +1,23 @@
+# models/schema.yml
+
+version: 2
+
+models:
+  - name: orders
+    description: "This model contains order data."
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('customers')        # Reference to customers model
+              field: customer_id
+
+      - name: order_date
+        tests:
+          - not_null

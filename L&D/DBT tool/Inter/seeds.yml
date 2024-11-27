@@ -1,0 +1,31 @@
+version: 2
+
+seeds:
+  - name: countries
+    description: "A static dataset of country codes and names"
+    columns:
+      - name: country_code
+        description: "Two-letter ISO country code"
+        tests:
+          - not_null
+          - unique
+      - name: country_name
+        description: "Full country name"
+        tests:
+          - not_null
+
+  - name: cities
+    description: "A dataset of cities and their populations"
+    columns:
+      - name: city_name
+        description: "Name of the city"
+        tests:
+          - not_null
+      - name: country_code
+        description: "Two-letter ISO country code"
+        tests:
+          - not_null
+      - name: population
+        description: "Population of the city"
+        tests:
+          - not_null

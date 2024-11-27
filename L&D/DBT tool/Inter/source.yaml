@@ -1,0 +1,31 @@
+# models/src/source.yml
+
+version: 2
+
+sources:
+  - name: shop # This should match your actual source schema name in the database
+    database:raw # Replace with your actual database name
+    schema: raffle                    # Schema where the raw tables are located
+
+    tables:
+      - name: orders
+        description: "Table containing order data"
+        columns:
+          - name: order_id
+            description: "Primary key of the order"
+          - name: customer_id
+            description: "ID of the customer who placed the order"
+          - name: order_date
+            description: "Date when the order was placed"
+          - name: total_amount
+            description: "Total amount for the order"
+
+      - name: customers
+        description: "Table containing customer data"
+        columns:
+          - name: customer_id
+            description: "Primary key of the customer"
+          - name: customer_name
+            description: "Name of the customer"
+          - name: customer_email
+            description: "Email address of the customer"

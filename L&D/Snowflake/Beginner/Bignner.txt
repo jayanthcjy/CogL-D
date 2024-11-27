@@ -1,0 +1,238 @@
+		
+		Advanced Data Transformation
+
+CREATE OR REPLACE TABLE SALES_DATA (
+    Sale_ID INT AUTOINCREMENT,
+    Sale_Date DATE,
+    Region STRING,
+    Product STRING,
+    Quantity INT,
+    Unit_Price DECIMAL(10, 2),
+    Customer_Info VARIANT -- Added to store JSON data
+);
+
+
+
+
+INSERT INTO SALES_DATA (Sale_Date, Region, Product, Quantity, Unit_Price, Customer_Info)
+SELECT 
+    '2024-01-01', 'North', 'A', 10, 20.00, PARSE_JSON('{"Name": "John", "Email": "john@example.com"}')
+UNION ALL
+SELECT
+    '2024-01-01', 'South', 'B', 5, 50.00, PARSE_JSON('{"Name": "Sarah", "Email": "sarah@example.com"}')
+UNION ALL
+SELECT
+    '2024-01-02', 'North', 'A', 15, 20.00, PARSE_JSON('{"Name": "Emily", "Email": "emily@example.com"}')
+UNION ALL
+SELECT
+    '2024-01-02', 'East', 'C', 8, 40.00, PARSE_JSON('{"Name": "Mark", "Email": "mark@example.com"}');
+
+
+
+SELECT * FROM SALES_DATA;
+
+Step-by-Step Transformation
+
+1. Basic Aggregation: Total Sales and Revenue by Region and Product
+
+SELECT 
+    Region,
+    Product,
+    SUM(Quantity) AS Total_Sales,
+    SUM(Quantity * Unit_Price) AS Total_Revenue
+FROM 
+    SALES_DATA
+GROUP BY 
+    Region, Product
+ORDER BY 
+    Region, Product;
+
+2. Window Function: Running Total of Sales by Region
+
+WITH Sales_Aggregated AS (
+    SELECT 
+        Region,
+        Product,
+        SUM(Quantity) AS Total_Sales,
+        SUM(Quantity * Unit_Price) AS Total_Revenue
+    FROM 
+        SALES_DATA
+    GROUP BY 
+        Region, Product
+)
+
+SELECT
+    Region,
+    Product,
+    Total_Sales,
+    Total_Revenue,
+    SUM(Total_Sales) OVER (PARTITION BY Region ORDER BY Product) AS Running_Total_Sales
+FROM
+    Sales_Aggregated
+ORDER BY
+    Region, Product;
+
+3. Pivoting Data: Creating a Product Sales Matrix
+
+SELECT 
+    Region,
+    SUM(CASE WHEN Product = 'A' THEN Quantity ELSE 0 END) AS Product_A_Sales,
+    SUM(CASE WHEN Product = 'B' THEN Quantity ELSE 0 END) AS Product_B_Sales,
+    SUM(CASE WHEN Product = 'C' THEN Quantity ELSE 0 END) AS Product_C_Sales
+FROM 
+    SALES_DATA
+GROUP BY 
+    Region
+ORDER BY 
+    Region;
+
+4. JSON Transformation: Extracting Customer Information
+
+SELECT 
+    Sale_ID,
+    Sale_Date,
+    Region,
+    Product,
+    Quantity,
+    Unit_Price,
+    Customer_Info:Name::STRING AS Customer_Name,
+    Customer_Info:Email::STRING AS Customer_Email
+FROM 
+    SALES_DATA
+WHERE 
+    Region = 'North';
+
+5. Time-Series Data Transformation: Rolling Average Sales
+
+SELECT 
+    Sale_Date,
+    Region,
+    Product,
+    Quantity,
+    AVG(Quantity) OVER (PARTITION BY Region ORDER BY Sale_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS Rolling_Avg_Sales
+FROM 
+    SALES_DATA
+ORDER BY 
+    Sale_Date, Region;
+
+
+		
+
+		Performance optimization
+
+
+1. Analyzing Query Performance
+EXPLAIN
+SELECT 
+    Region, 
+    Product, 
+    SUM(Quantity) AS Total_Quantity, 
+    SUM(Quantity * Unit_Price) AS Total_Sales
+FROM SALES_DATA
+WHERE Sale_Date BETWEEN '2024-01-01' AND '2024-01-02'
+GROUP BY Region, Product;
+
+2. Implementing Clustering Keys
+ALTER TABLE SALES_DATA
+CLUSTER BY (Sale_Date);
+
+3. Creating Views
+CREATE OR REPLACE VIEW v_sales_summary AS
+SELECT 
+    Region, 
+    Product, 
+    SUM(Quantity) AS Total_Quantity, 
+    SUM(Quantity * Unit_Price) AS Total_Sales
+FROM SALES_DATA
+GROUP BY Region, Product;
+
+4. Using Result Caching
+SELECT 
+    Region, 
+    Product, 
+    SUM(Quantity) AS Total_Quantity, 
+    SUM(Quantity * Unit_Price) AS Total_Sales
+FROM SALES_DATA
+WHERE Sale_Date BETWEEN '2024-01-01' AND '2024-01-02'
+GROUP BY Region, Product;
+
+5. Data Compression
+Check the status of views:
+DESC VIEW v_sales_summary;
+
+Monitor clustering depth:
+SELECT SYSTEM$CLUSTERING_DEPTH('SALES_DATA');
+
+
+
+		
+
+		Data Sharing and Collaboration
+
+1. Create a Share
+
+-- Create a share named NORTH_REGION_SHARE
+CREATE SHARE NORTH_REGION_SHARE;
+
+2.Grant Access to the Table
+-- Grant usage on the database and schema to the share
+GRANT USAGE ON DATABASE JAY TO SHARE NORTH_REGION_SHARE;
+GRANT USAGE ON SCHEMA JAY.PUBLIC TO SHARE NORTH_REGION_SHARE;
+
+-- Grant select access on the SALES_DATA table to the share
+GRANT SELECT ON TABLE JAY.PUBLIC.SALES_DATA TO SHARE NORTH_REGION_SHARE;
+
+3.Restrict Access to North Region Data (Optional)
+-- Create a secure view for North region data only
+CREATE SECURE VIEW JAY.PUBLIC.NORTH_REGION_SALES AS
+SELECT *
+FROM JAY.PUBLIC.SALES_DATA
+WHERE Region = 'North';
+
+-- Grant select access on the secure view to the share
+GRANT SELECT ON VIEW JAY.PUBLIC.NORTH_REGION_SALES TO SHARE NORTH_REGION_SHARE;
+
+4. Accessing the Shared Data (Consumer Perspective)
+
+Step 1: Create a Database from the Share
+-- Create a database from the shared data
+CREATE DATABASE SALES_SHARED_DB FROM SHARE techymart_account_name.NORTH_REGION_SHARE;
+
+Step 2: Query the Shared Data
+-- Query the shared North region sales data
+SELECT * FROM SALES_SHARED_DB.PUBLIC.NORTH_REGION_SALES;
+
+
+
+
+			Snow SQL
+
+snowsql -a <account_name> -u <username> -r <role> -w <warehouse> -d <database> -s <schema>
+
+snowsql -a xy12345.us-east-1 -u my_user -r my_role -w my_warehouse -d my_database -s public
+
+snowsql -a HXMDIYF-YD98190.central-india.azure -u jayanthcjy -r accountadmin -w compute_wh -d jay -s public
+
+snowsql -a HXMDIYF-YD98190.central-india.azure -u jayanthcjy -r accountadmin -w compute_wh -d jay -s public -o log_level=DEBUG
+
+
+HXMDIYF.YD98190
+
+snowsql -a HXMDIYF.YD98190
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
